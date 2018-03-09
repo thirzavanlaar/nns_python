@@ -1,0 +1,11 @@
+# All Figures
+*.pdf
+Figures/*
+
+
+# Data files
+*.nc
+
+# Miscellaneous
+haversine.pyc
+

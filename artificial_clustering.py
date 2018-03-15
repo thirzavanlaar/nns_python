@@ -7,26 +7,21 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster, ward
 import numpy as np
 from scipy.spatial import distance
-from haversine import haversine_V
+from artificial_distance import euclidean_V,euclidean
 
-cusize = NetCDFFile('/home/vanlaar/HDCP2data/TA_dom4/cusize_output_time41.nc')
 
 # Import data from netcdf file:
-cloudlon = cusize.variables['cloud_lon']
-cloudlat = cusize.variables['cloud_lat']
-nclouds_cusize  = cusize.variables['nclouds']
-cloud_bin = cusize.variables['cloud_bin']
-size = cusize.variables['size']
-nclouds = int(nclouds_cusize[0])
+size = [100,200]
+nclouds = 9
 
 # Adjust data format for later use:
-cloud_lon = cloudlon[0,0:nclouds]
-cloud_lat = cloudlat[0,0:nclouds]
-cloud_size = cloud_bin[0,:nclouds]*size[0]
+cloud_lon = [4,2,2,2,4,6,6,6,4]
+cloud_lat = [4,2,4,6,6,6,4,2,2]
+cloud_size = [2,1,1,1,1,1,1,1,1]
 cloudcentres = np.vstack((cloud_lon,cloud_lat,cloud_size)).T
 
 # Compute distances for all pairs based on White et al 2018:
-Y = distance.pdist(cloudcentres, haversine_V)
+Y = distance.pdist(cloudcentres, euclidean_V)
 
 # Compute linkage matrix:
 Z = ward(Y)
@@ -43,19 +38,19 @@ dendrogram(
     #show_leaf_counts=False,
     show_contracted=True,
 )
-plt.savefig('Figures/Dendrogram.pdf')
+plt.savefig('Figures/Artificial_dendrogram.pdf')
 
 # Compute clusters, based on dendrogram and cut-off value max_d:
-max_d = 1.0
+max_d = 1.4
 clusters = fcluster(Z, max_d, criterion='distance')
 
 # Plot clusters:
 plt.figure(figsize=(10,8))
-#plt.axis([-0.995, -0.991, 0.233, 0.236])
+plt.axis([-2, 10, -2, 10])
 plt.xlabel('Longitude')
 plt.ylabel('Latitude')
 plt.scatter(cloudcentres[:,0],cloudcentres[:,1], c=clusters)
-plt.savefig('Figures/Clusters.pdf')
+plt.savefig('Figures/Artificial_clusters.pdf')
 
 
 

@@ -22,6 +22,7 @@ end_time = 48
 
 mindistance_JC_mean_all = np.zeros((end_time-begin_time+1,len(size)))
 mindistance_JC_std_all = np.zeros((end_time-begin_time+1,len(size)))
+neighbour_avg_all = np.zeros((end_time-begin_time+1,len(size)))
 
 
 for time in range(begin_time,end_time+1):
@@ -46,9 +47,12 @@ for time in range(begin_time,end_time+1):
 
     mindistance_JC_mean_all[time-41] = output[0]
     mindistance_JC_std_all[time-41] = output[1]
+    neighbour_avg_all[time-41,:] = output[2]
 
-mindistance_JC_mean = np.mean(mindistance_JC_mean_all,axis=0)
-mindistance_JC_std = np.mean(mindistance_JC_std_all,axis=0)
+
+mindistance_JC_mean = np.mean(mindistance_JC_mean_all,axis=0)/1000
+mindistance_JC_std = np.mean(mindistance_JC_std_all,axis=0)/1000
+neighbour_avg = np.mean(neighbour_avg_all,axis=0)*size[0]
 
 mindistance_JC_plus = mindistance_JC_mean + mindistance_JC_std
 mindistance_JC_minus = mindistance_JC_mean - mindistance_JC_std
@@ -62,21 +66,34 @@ line = intercept + slope*size
 print 'slope:',slope
 print 'intercept:',intercept
 
+orange = (0.93,0.47,0.26)
+blue = (0.53,0.81,1)
+green = (0.13,0.55,0.13)
 
-plt.figure(figsize=(10,8))
-plt.axis([0, 5500, 0, 4000])
-plt.xlabel('Cloud size [m]')
-plt.ylabel('Nearest-neighbour distance [m]')
-plt.fill_between(size,mindistance_JC_plus,mindistance_JC_minus,alpha=0.3,color='red')
+plt.figure(figsize=(14,8))
+plt.axis([0, 5500, 0, 4])
+plt.xlabel('Cloud size [m]',fontsize=15)
+plt.ylabel('Nearest-neighbour distance [km]',fontsize=15)
+plt.fill_between(size,mindistance_JC_plus,mindistance_JC_minus,alpha=0.3,color=blue)
 plt.scatter(size,mindistance_JC_mean,color='k')
 #plt.scatter(size,mindistance_plus,color='g')
-plt.plot(size,line,color='black')
+#plt.plot(size,line,color='black')
 plt.savefig('Figures/mindistance_JC.pdf')
+plt.savefig('Figures/mindistance_JC.png')
 
 
 
 plt.figure()
-plt.xlabel('size')
-plt.ylabel('ratio distance/size')
+plt.xlabel('size',fontsize=15)
+plt.ylabel('ratio distance/size',fontsize=15)
 plt.scatter(size[0:filledbin],mindistance_JC_mean[0:filledbin]/size[0:filledbin])
 plt.savefig('Figures/ratio_distance_size_JC.pdf')
+
+
+plt.figure(figsize=(14,8))
+plt.xlabel('Cloud size [m]',fontsize=15)
+plt.ylabel('Nearest neighbour size [m]',fontsize=15)
+plt.scatter(size[0:filledbin],neighbour_avg[0:filledbin],c=green,s=120)
+plt.savefig('Figures/neighbour_size_avg.pdf')
+plt.savefig('Figures/neighbour_size_avg.png')
+

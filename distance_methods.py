@@ -7,25 +7,10 @@ from netCDF4 import Dataset as NetCDFFile
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy import stats 
-from haversine import haversine
+from haversine import haversine, haversine_V
 from scipy.spatial import distance
+from collections import Counter
 
-# Import data:
-
-#cusize = NetCDFFile(
-#         '/home/vanlaar/HDCP2data/TA_dom4/cusize_output_time41.nc')
-#
-#cloudlon = cusize.variables['cloud_lon']
-#cloudlat = cusize.variables['cloud_lat']
-#nclouds_cusize  = cusize.variables['nclouds']
-#size = cusize.variables['size']
-#cloud_bin = cusize.variables['cloud_bin']
-#hn = cusize.variables['hn']
-#
-#nclouds = int(nclouds_cusize[0])
-#cloud_lon = cloudlon[0,0:nclouds]
-#cloud_lat = cloudlat[0,0:nclouds]
-#filledbin=np.argmin(hn[0,:])  # last bin with clouds, rest is empty
 
 
 def distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,nclouds):
@@ -34,11 +19,13 @@ def distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,nclouds):
     D0=np.zeros((len(size)))
     mindistance_mean=np.zeros((len(size)))
     mindistance_std=np.zeros((len(size)))
+    maxdistance=np.zeros((len(size)))
+    maxdistanceY=np.zeros((len(size)))
 
     for bb in range(0, filledbin+1):
         binclouds=np.zeros((nclouds,2))
         # Select clouds present in current bin bb:
-        idx = np.where(cloud_bin[0,:]==bb+1)          
+        idx = np.where(cloud_bin[:]==bb+1)          
         binclouds[idx,0]=cloud_lon[idx]
         binclouds[idx,1]=cloud_lat[idx]
         ncloud_bin[bb] = len(idx[0])
@@ -47,44 +34,113 @@ def distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,nclouds):
             Y = distance.pdist(binclouds[idx],haversine)
             D0[bb] = stats.gmean(Y)
             D1[bb] = np.mean(Y)
-
             # Taking only the minimum distance per cloud (nearest neighbours):
             Z = distance.squareform(Y)
-            Z[Z==0] = np.nan
-            mindistances = np.nanmin(Z,axis=0)
-            mindistance_mean[bb] = np.mean(mindistances)
+            Z = np.ma.masked_where(Z==0,Z)
+            mindistances = np.min(Z,axis=0)
+            mindistance_mean[bb] = np.ma.mean(mindistances)
             mindistance_std[bb] = np.std(mindistances)
+            maxdistance[bb] = np.max(mindistances)
+            maxdistanceY[bb] = np.max(Y)
     return D0,D1,mindistance_mean,mindistance_std,ncloud_bin
         
 
 def JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size):
 
     cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
-    
+
+    nr_bins = len(size)    
     mindistance_JC_mean = np.zeros((len(size)))
     mindistance_JC_std = np.zeros((len(size)))
+    neighbour_avg = np.zeros((len(size)))
+    neighbour_histo = np.zeros((len(size),len(size)))
 
     Y = distance.pdist(cloudcentres,haversine)
     Z = distance.squareform(Y)
-    Z[Z==0] =np.nan
-    mindistances = np.nanmin(Z,axis=0)
+    Z = np.ma.masked_where(Z==0,Z)
+    mindistances = np.min(Z,axis=0)
+
+    neighbour_idx = np.argmin(Z,axis=0)
+    neighbour_size = np.array([cloud_bin[0,xi] for xi in neighbour_idx])
+
+    #histo = Counter(neighbour_size)
+    #histo = np.histogram(neighbour_size)
+    
+    bins_histo = np.arange(0,len(size)+1)
 
     for bb in range(0, filledbin+1):
         idx = np.where(cloud_bin[0,:]==bb+1)
+        #print 'idx:',idx
         if len(idx[0]) >= 3:
-            mindistance_JC_mean[bb] = np.nanmean(mindistances[idx])
-            mindistance_JC_std[bb] = np.nanstd(mindistances[idx])
-
-    return mindistance_JC_mean,mindistance_JC_std
-
-
-
-
+            mindistance_JC_mean[bb] = np.mean(mindistances[idx])
+            mindistance_JC_std[bb] = np.std(mindistances[idx])          
+            neighbour_avg[bb] = np.mean(neighbour_size[idx])
+            histogram = np.histogram(neighbour_size[idx],bins=bins_histo,density=True)
+            #len_hist = len(histogram[0])
+            neighbour_histo[bb,:] = histogram[0]
 
 
+    return mindistance_JC_mean,mindistance_JC_std,neighbour_avg,neighbour_histo
 
 
 
+def SCAI(cloud_lon,cloud_lat,N,Nmax,L):
+
+    cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
+
+    Y = distance.pdist(cloudcentres,haversine)
+    
+    D0 = stats.gmean(Y)
+    D1 = np.mean(Y)
+   
+    N = float(N)
+    Nmax = float(Nmax)
+ 
+    SCAI_0 = (N/Nmax)*(D0/L)*1000
+    SCAI_1 = (N/Nmax)*(D1/L)*1000
+
+    return SCAI_0,SCAI_1
+
+
+
+def COP(cloud_lon,cloud_lat,cloud_size):
+
+    print len(cloud_lon)
+
+    cloudcentres = np.vstack((cloud_lon,cloud_lat,cloud_size)).T 
+
+    V = distance.pdist(cloudcentres,haversine_V)
+
+    print len(V)
+    
+    COP = np.sum(V)/len(V)
+
+    return COP
+
+
+
+def NNCDF(cloud_lon,cloud_lat,size):
+
+    cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
+
+    #nr_bins = len(size)    
+
+    Y = distance.pdist(cloudcentres,haversine)
+    Z = distance.squareform(Y)
+    Z = np.ma.masked_where(Z==0,Z)
+    mindistances = np.min(Z,axis=0)
+
+    #histo = Counter(neighbour_size)
+    #histo = np.histogram(neighbour_size)
+   
+    print len(size)
+ 
+    #bins_histo = np.arange(0,filledbin)
+    bins_histo = np.arange(0,len(size)+1)
+    values, base = np.histogram(mindistances,bins=bins_histo,density=True)
+    nncdf = np.cumsum(values)
+
+    return nncdf
 
 
 

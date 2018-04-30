@@ -1,11 +1,13 @@
 # All Figures
 *.pdf
 Figures/*
+Regularfield/*
 
 
 # Data files
 *.nc
 
 # Miscellaneous
+*.pyc
 haversine.pyc
 

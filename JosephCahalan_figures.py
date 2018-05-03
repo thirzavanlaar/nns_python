@@ -10,7 +10,7 @@ from numpy import ma
 from scipy import stats 
 from haversine import haversine
 from scipy.spatial import distance
-from distance_methods import distances,JosephCahalan
+from distance_methods import distances,JosephCahalan, JosephCahalan_kneighbour
 
 cusize = NetCDFFile(
          '/home/vanlaar/HDCP2data/TA_dom4/cusize_output_time41.nc')
@@ -43,7 +43,8 @@ for time in range(begin_time,end_time+1):
     cloud_lat = cloudlat[0,0:nclouds]
     filledbin=np.argmin(hn[0,:])  # last bin with clouds, rest is empty
 
-    output = JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size)
+    #output = JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size)
+    output = JosephCahalan_kneighbour(filledbin,cloud_bin,cloud_lon,cloud_lat,size,5)
 
     mindistance_JC_mean_all[time-41] = output[0]
     mindistance_JC_std_all[time-41] = output[1]

@@ -14,6 +14,9 @@ from collections import Counter
 
 
 def distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,nclouds):
+    """
+    Compute nearest neighbour distances only between clouds belonging to the same bin.
+    """
     ncloud_bin=np.zeros((len(size)))
     D1=np.zeros((len(size)))
     D0=np.zeros((len(size)))
@@ -46,6 +49,9 @@ def distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,nclouds):
         
 
 def JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size):
+    """
+    Compute nearest neighbour distances between all clouds and average them per bin, based on Joseph and Cahalan (1990).
+    """
 
     cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
 
@@ -62,6 +68,56 @@ def JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size):
 
     neighbour_idx = np.argmin(Z,axis=0)
     neighbour_size = np.array([cloud_bin[0,xi] for xi in neighbour_idx])
+
+    bins_histo = np.arange(0,len(size)+1)
+
+    for bb in range(0, filledbin+1):
+        idx = np.where(cloud_bin[0,:]==bb+1)
+        if len(idx[0]) >= 3:
+            mindistance_JC_mean[bb] = np.mean(mindistances[idx])
+            mindistance_JC_std[bb] = np.std(mindistances[idx])          
+            neighbour_avg[bb] = np.mean(neighbour_size[idx])
+            histogram = np.histogram(neighbour_size[idx],bins=bins_histo,density=True)
+            neighbour_histo[bb,:] = histogram[0]
+
+
+    return mindistance_JC_mean,mindistance_JC_std,neighbour_avg,neighbour_histo
+
+
+def JosephCahalan_kneighbour(filledbin,cloud_bin,cloud_lon,cloud_lat,size,nr_neighbours):
+    """
+    Take the k nearest neighbours of a cloud, average the k distances to these clouds and then average these values per bin.
+    """
+
+    cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
+
+    nr_bins = len(size)    
+    mindistance_JC_mean = np.zeros((len(size)))
+    mindistance_JC_std = np.zeros((len(size)))
+    neighbour_avg = np.zeros((len(size)))
+    neighbour_histo = np.zeros((len(size),len(size)))
+
+    Y = distance.pdist(cloudcentres,haversine)
+    Z = distance.squareform(Y)
+    Z = np.ma.masked_where(Z==0,Z)
+
+    mindistances = np.zeros(len(cloud_lon))
+    neighbour_size = np.zeros(len(cloud_lon))
+
+    for i in range(0,len(cloud_lon)):
+        A = Z[i,:]
+        idx = np.argpartition(A,nr_neighbours)
+        kneighbours = A[idx[:nr_neighbours]]
+        mindistances[i] = np.mean(kneighbours)
+        ksizes = cloud_bin[0,idx[:nr_neighbours]]
+        neighbour_size[i] = np.mean(ksizes)
+
+    #neighbour_idx = np.argpartition(
+
+    #mindistances = np.min(Z,axis=0)
+
+    #neighbour_idx = np.argmin(Z,axis=0)
+    #neighbour_size = np.array([cloud_bin[0,xi] for xi in neighbour_idx])
 
     #histo = Counter(neighbour_size)
     #histo = np.histogram(neighbour_size)
@@ -82,9 +138,11 @@ def JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size):
 
     return mindistance_JC_mean,mindistance_JC_std,neighbour_avg,neighbour_histo
 
-
-
 def SCAI(cloud_lon,cloud_lat,N,Nmax,L):
+
+    """
+    Compute the SCAI for a cloud field, based on Tobin et al (2012). 
+    """
 
     cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
 
@@ -104,14 +162,13 @@ def SCAI(cloud_lon,cloud_lat,N,Nmax,L):
 
 
 def COP(cloud_lon,cloud_lat,cloud_size):
-
-    print len(cloud_lon)
+    """
+    Compute the COP for a cloud field, based on White et al (2017).
+    """
 
     cloudcentres = np.vstack((cloud_lon,cloud_lat,cloud_size)).T 
 
     V = distance.pdist(cloudcentres,haversine_V)
-
-    print len(V)
     
     COP = np.sum(V)/len(V)
 
@@ -120,21 +177,17 @@ def COP(cloud_lon,cloud_lat,cloud_size):
 
 
 def NNCDF(cloud_lon,cloud_lat,size):
+    """
+    Compute the nncdf of a cloud field, based on Nair et al (1998).
+    """
 
     cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
-
-    #nr_bins = len(size)    
 
     Y = distance.pdist(cloudcentres,haversine)
     Z = distance.squareform(Y)
     Z = np.ma.masked_where(Z==0,Z)
     mindistances = np.min(Z,axis=0)
 
-    #histo = Counter(neighbour_size)
-    #histo = np.histogram(neighbour_size)
-   
-    print len(size)
- 
     #bins_histo = np.arange(0,filledbin)
     bins_histo = np.arange(0,len(size)+1)
     values, base = np.histogram(mindistances,bins=bins_histo,density=True)

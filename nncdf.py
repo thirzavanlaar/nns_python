@@ -22,8 +22,8 @@ clat_grid = grid.variables['clat']
 Nmax = len(clon_grid)/2
 lengthscale = 440000
 
-begin_time = 41
-end_time = 41
+begin_time = 45
+end_time = 45
 
 D0_all = np.zeros((end_time-begin_time+1,len(size)))
 D1_all = np.zeros((end_time-begin_time+1,len(size)))
@@ -31,6 +31,7 @@ nclouds_bin_all = np.zeros((end_time-begin_time+1,len(size)))
 nclouds_all = np.zeros((end_time-begin_time+1))
 SCAI_0_all = np.zeros((end_time-begin_time+1))
 SCAI_1_all = np.zeros((end_time-begin_time+1))
+area = np.zeros((end_time-begin_time+1))
 
 for time in range(begin_time,end_time+1):
     print 'time:',time
@@ -40,36 +41,62 @@ for time in range(begin_time,end_time+1):
 
     cloudlon = cusize.variables['cloud_lon']
     cloudlat = cusize.variables['cloud_lat']
-    nclouds_cusize  = cusize.variables['nclouds']
+    nclouds_real = cusize.variables['nclouds'][0]
     size = cusize.variables['size']
     cloudbin = cusize.variables['cloud_bin']
     hn = cusize.variables['hn']
-    hn_normalized_loop = hn/nclouds_cusize[0]
-    ncloud_bin = cusize.variables['ncloud_bin']
+    hn_normalized_loop = hn/nclouds_real
+    ncloud_bin = cusize.variables['ncloud_bin'][:]
 
-    nclouds = int(nclouds_cusize[0])
-    cloud_lon = cloudlon[0,0:nclouds]
-    cloud_lat = cloudlat[0,0:nclouds]
-    cloud_bin = cloudbin[0,0:nclouds] 
+    ncloudsint = int(nclouds_real)
+    cloud_lon = cloudlon[0,0:ncloudsint]
+    cloud_lat = cloudlat[0,0:ncloudsint]
+    cloud_bin = cloudbin[0,0:ncloudsint] 
     filledbin = int(max(cloud_bin))
     
-    output_distances = distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,nclouds)
+    output_distances = distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,ncloudsint)
 
-    D0_all[time-41] = output_distances[0]
-    D1_all[time-41] = output_distances[1]
-    nclouds_bin_all[time-41] = output_distances[4]
-    nclouds_all[time-41] = nclouds_cusize[0]
+    #D0_all[time-41] = output_distances[0]
+    #D1_all[time-41] = output_distances[1]
+    #nclouds_bin_all[time-41] = output_distances[4]
+    #nclouds_all[time-41] = nclouds_real
+    nclouds_bin_all[0] = output_distances[4]
+    nclouds_all[0] = nclouds_real
     
     nncdf_real = NNCDF(cloud_lon,cloud_lat,size)
+
+    ####################
+    ####Random field####
+    ####################
+
+    #probability = nclouds_bin_all[time-41]/nclouds_real
+    probability = nclouds_bin_all[0]/nclouds_real
+    nrbins = len(size)
+
+    binwidth = size[0]
+
+    randomfield_output = randomfield_nooverlap(ncloudsint,nrbins,clon_grid,clat_grid,probability,binwidth)
+    #randomfield_output = randomfield(ncloudsint,nrbins,clon_grid,clat_grid,probability)
+    
+    cloud_lon_random = randomfield_output[0]
+    cloud_lat_random = randomfield_output[1]
+    cloud_bin_random = np.array(randomfield_output[2])
+    
+    #distances_random = distances(filledbin,cloud_lon_random,cloud_lat_random,cloud_bin_random,size,nrclouds)
+    
+    nncdf_random = NNCDF(cloud_lon_random,cloud_lat_random,size)
+
+    #area[time-41] = np.trapz(nncdf_real, nncdf_random)
+    area[0] = np.trapz(nncdf_real, nncdf_random)
+    print area
+    
 
 
 D0 = np.mean(D0_all,axis=0)
 D1 = np.mean(D1_all,axis=0)
 nclouds_av = int(np.mean(nclouds_all))
 nclouds_bin_av = np.mean(nclouds_bin_all,axis=0)
-nrbins = len(nclouds_bin_av)
 
-probability = nclouds_bin_av/nclouds_av
 
 #cloud_bin_av = np.zeros(nclouds_av)
 #j=0 

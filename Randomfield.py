@@ -10,6 +10,12 @@ import itertools
 
 def randomfield(nclouds,nrbins,clon,clat,probability):
 
+    """
+    Compute a random cloud field
+
+    Clouds are sampled from the CSD of the real field (represented by 'probability' and placed randomly in the field (clon and clat). Outputs are the coordinates of the clouds and their size (represented by the binnr they are in).
+    """
+
     ncells_grid = len(clon)
     ncells_range = np.arange(0,ncells_grid,1)
     random_cells = random.sample(ncells_range, nclouds)
@@ -26,6 +32,12 @@ def randomfield(nclouds,nrbins,clon,clat,probability):
 
 
 def randomfield_nooverlap(nclouds,nrbins,clon,clat,probability,binwidth):
+
+    """
+    Compute a random cloud field without overlap
+
+    Clouds are sampled from the CSD of the real field and randomly placed in the domain. See also 'randomfield'. When a field is generated it is checked for overlap. When there is overlap, a new one is made. This continues as long as necessary to find a random field without overlap, with a maximum number of iterations.
+    """
 
     checker = True
     nr = 0
@@ -58,7 +70,7 @@ def randomfield_nooverlap(nclouds,nrbins,clon,clat,probability,binwidth):
                 checker = True
                 break
 
-        if nr>5000:
+        if nr>2000:
             raise ValueError('Cannot find random configuration!')	
 
     

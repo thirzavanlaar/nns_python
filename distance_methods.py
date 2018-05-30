@@ -56,6 +56,7 @@ def JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size):
     cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
 
     nr_bins = len(size)    
+    ncloud_bin=np.zeros((len(size)))
     mindistance_JC_mean = np.zeros((len(size)))
     mindistance_JC_std = np.zeros((len(size)))
     neighbour_avg = np.zeros((len(size)))
@@ -73,6 +74,7 @@ def JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size):
 
     for bb in range(0, filledbin+1):
         idx = np.where(cloud_bin[0,:]==bb+1)
+        ncloud_bin[bb] = len(idx[0])
         if len(idx[0]) >= 3:
             mindistance_JC_mean[bb] = np.mean(mindistances[idx])
             mindistance_JC_std[bb] = np.std(mindistances[idx])          
@@ -81,7 +83,7 @@ def JosephCahalan(filledbin,cloud_bin,cloud_lon,cloud_lat,size):
             neighbour_histo[bb,:] = histogram[0]
 
 
-    return mindistance_JC_mean,mindistance_JC_std,neighbour_avg,neighbour_histo
+    return mindistance_JC_mean,mindistance_JC_std,neighbour_avg,neighbour_histo,ncloud_bin
 
 
 def JosephCahalan_kneighbour(filledbin,cloud_bin,cloud_lon,cloud_lat,size,nr_neighbours):
@@ -173,6 +175,26 @@ def COP(cloud_lon,cloud_lat,cloud_size):
     COP = np.sum(V)/len(V)
 
     return COP
+
+
+def COP_perbin(cloud_lon,cloud_lat,cloud_bin,size,filledbin):
+    """
+    Compute the COP for a cloud field, based on White et al (2017).
+    """
+
+    cloud_size = cloud_bin*size[0]
+    cloudcentres = np.vstack((cloud_lon,cloud_lat,cloud_size)).T 
+
+    COP_perbin = np.zeros(len(size))
+
+    for bb in range(0, filledbin+1):
+        idx = np.where(cloud_bin[:]==bb+1)
+        cloudsinbin = cloudcentres[idx,:]
+        V = distance.pdist(cloudsinbin[0,:,:],haversine_V)
+        COP_perbin[bb] = np.sum(V)/len(V)
+        #COP_perbin[bb] = np.sum(V)
+        
+    return COP_perbin 
 
 
 

@@ -37,22 +37,21 @@ for time in range(begin_time,end_time+1):
     cusize = NetCDFFile(
          '/home/vanlaar/HDCP2data/TA_dom4/cusize_output_time'+str(time)+'.nc')
 
-    cloudlon = cusize.variables['cloud_lon']
-    cloudlat = cusize.variables['cloud_lat']
+    cloudlon = cusize.variables['cloud_lon'][:]
+    cloudlat = cusize.variables['cloud_lat'][:]
     nclouds_cusize  = cusize.variables['nclouds']
     #size = cusize.variables['size']
-    cloud_bin = cusize.variables['cloud_bin']
+    cloud_bin = cusize.variables['cloud_bin'][0,:]
     hn = cusize.variables['hn']
     hn_normalized_loop = hn/nclouds_cusize[0]
     ncloud_bin = cusize.variables['ncloud_bin']
 
-
-    nclouds = int(nclouds_cusize[0])
-    cloud_lon = cloudlon[0,0:nclouds]
-    cloud_lat = cloudlat[0,0:nclouds]
+    ncloudsint = int(nclouds_cusize[0])
+    cloud_lon = cloudlon[0,0:ncloudsint]
+    cloud_lat = cloudlat[0,0:ncloudsint]
     filledbin=np.argmin(hn[0,:])  # last bin with clouds, rest is empty
 
-    output_distances = distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,nclouds)
+    output_distances = distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,ncloudsint)
 
     D0_all[time-41] = output_distances[0]
     D1_all[time-41] = output_distances[1]
@@ -98,6 +97,11 @@ line = intercept + slope*size
 print 'slope:',slope
 print 'intercept:',intercept
 
+##################################################################
+### Plots
+
+threshold = 0.005*sum(nclouds)
+maxbin = np.min(np.where(nclouds <= threshold))
 
 orange = (1.,0.38,0.01)
 blue = (0.53,0.81,1)
@@ -110,6 +114,10 @@ plt.fill_between(size,mindistance_plus,mindistance_minus,alpha=0.3,color=blue)
 plt.scatter(size,mindistance_mean,color='k')
 #plt.scatter(size,mindistance_plus,color='g')
 #plt.plot(size,line,color='black')
+ax = plt.gca()
+ax.axvspan(size[maxbin], 5500, alpha=0.2, color='grey')
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
 plt.savefig('Figures/mindistance.pdf')
 plt.savefig('Figures/mindistance.png')
 
@@ -130,24 +138,33 @@ plt.scatter(sizelog[0:10],logfit[0:10])
 plt.savefig('Figures/CSD.pdf')
 
 
-plt.figure()
-plt.xlabel('size')
-plt.ylabel('ratio distance/size')
+plt.figure(figsize=(10,8))
+plt.xlabel('Cloud size')
+plt.ylabel('Ratio distance/size')
+plt.axis([0, 5500, 0, 0.02])
+ax = plt.gca()
+ax.axvspan(size[maxbin], 5500, alpha=0.2, color='grey')
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+plt.savefig('Figures/mindistance.pdf')
 plt.scatter(size[0:filledbin],mindistance_mean[0:filledbin]/size[0:filledbin])
 plt.savefig('Figures/ratio_distance_size.pdf')
 
 
-plt.figure()
-plt.xlabel('size')
-plt.ylabel('nclouds')
+
+plt.figure(figsize=(10,8))
+plt.xlabel('Cloud size')
+plt.ylabel('Number of clouds')
+plt.axhline(y=threshold, c='black')
+ax = plt.gca()
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
 plt.scatter(size[0:filledbin],nclouds[0:filledbin])
 plt.savefig('Figures/nclouds_size.pdf')
 
-plt.figure()
+plt.figure(figsize=(10,8))
 plt.xlabel('size')
 plt.ylabel('nclouds')
 plt.scatter(size[0:filledbin],ncloudslog[0:filledbin])
 plt.savefig('Figures/nclouds_size_log.pdf')
 
-print nclouds[20:filledbin]
-print size[20:filledbin]

@@ -42,6 +42,8 @@ def randomfield_nooverlap(nclouds,nrbins,clon,clat,probability,binwidth):
     checker = True
     nr = 0
 
+    overlap = np.zeros(2000)
+
     while checker:
 
         nr += 1
@@ -67,6 +69,7 @@ def randomfield_nooverlap(nclouds,nrbins,clon,clat,probability,binwidth):
             if distance>mindistance:
                 checker = False
             if distance<mindistance:
+                overlap[nr] = overlap[nr] + distance                
                 checker = True
                 break
 
@@ -75,6 +78,57 @@ def randomfield_nooverlap(nclouds,nrbins,clon,clat,probability,binwidth):
 
     
     return cloud_lon_random,cloud_lat_random,cloud_bin_random
+
+
+
+def overlap(nclouds,nrbins,clon,clat,probability,binwidth):
+
+    checker = True
+    nr = 0
+
+    overlap = np.zeros(100)
+    cloud_lon_random = np.zeros([100,nclouds])
+    cloud_lat_random = np.zeros([100,nclouds])
+    cloud_bin_random = np.zeros([100,nclouds])
+
+    while checker:
+
+        #print 'nr:',nr
+        randomfieldx = randomfield(nclouds, nrbins, clon, clat, probability)
+
+        cloud_lon_random[nr,:] = randomfieldx[0]
+        cloud_lat_random[nr,:] = randomfieldx[1]
+        cloud_bin_random[nr,:] = randomfieldx[2]
+
+        cloud_size = binwidth * cloud_bin_random[nr,:]
+
+        # check for overlap:
+        cloudcentres = np.vstack((cloud_lon_random[nr,:], cloud_lat_random[nr,:])).T
+
+        cloud_index = np.arange(0,nclouds)	
+        pairs = itertools.combinations(cloud_index,2)
+
+        for i in pairs:
+            index1, index2 = np.array(i)
+            distance = haversine(cloudcentres[index1],cloudcentres[index2])
+            mindistance = 0.5*cloud_size[index1]+0.5*cloud_size[index2]
+            if distance>mindistance:
+                checker = False
+            if distance<mindistance:
+                overlap[nr] = overlap[nr] + distance                
+                checker = True
+                break
+
+        nr += 1
+        if nr>99:
+            #raise ValueError('Cannot find random configuration!')	
+            checker = False
+
+   
+
+    return cloud_lon_random,cloud_lat_random,cloud_bin_random,overlap
+
+
 
 #randomfield = NetCDFFile('randomfield.nc','w')
 #

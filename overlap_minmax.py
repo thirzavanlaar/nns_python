@@ -23,8 +23,9 @@ Nmax = len(clon_grid)/2
 lengthscale = 440000
 
 begin_time = 41
-end_time = 42
+end_time = 48
 
+binwidth = size[0]
 D0_all = np.zeros((end_time-begin_time+1,len(size)))
 D1_all = np.zeros((end_time-begin_time+1,len(size)))
 nclouds_bin_all = np.zeros((end_time-begin_time+1,len(size)))
@@ -32,10 +33,16 @@ nclouds_all = np.zeros((end_time-begin_time+1))
 SCAI_0_all = np.zeros((end_time-begin_time+1))
 SCAI_1_all = np.zeros((end_time-begin_time+1))
 area = np.zeros((end_time-begin_time+1))
-cloud_lon_random = np.zeros((end_time-begin_time+1,Nmax))
-cloud_lat_random = np.zeros((end_time-begin_time+1,Nmax))
-cloud_bin_random = np.zeros((end_time-begin_time+1,Nmax))
+cloud_lon_min = np.zeros((end_time-begin_time+1,Nmax))
+cloud_lat_min = np.zeros((end_time-begin_time+1,Nmax))
+cloud_bin_min = np.zeros((end_time-begin_time+1,Nmax))
 random_overlap_output = np.zeros((end_time-begin_time+1))
+cloud_lon_max = np.zeros((end_time-begin_time+1,Nmax))
+cloud_lat_max = np.zeros((end_time-begin_time+1,Nmax))
+cloud_bin_max = np.zeros((end_time-begin_time+1,Nmax))
+cloud_lon = np.zeros((end_time-begin_time+1,Nmax))
+cloud_lat = np.zeros((end_time-begin_time+1,Nmax))
+cloud_bin = np.zeros((end_time-begin_time+1,Nmax))
 
 for time in range(begin_time,end_time+1):
     print 'time:',time
@@ -53,21 +60,19 @@ for time in range(begin_time,end_time+1):
     ncloud_bin = cusize.variables['ncloud_bin'][:]
 
     ncloudsint = int(nclouds_real)
-    cloud_lon = cloudlon[0,0:ncloudsint]
-    cloud_lat = cloudlat[0,0:ncloudsint]
-    cloud_bin = cloudbin[0,0:ncloudsint] 
-    filledbin = int(max(cloud_bin))
+    cloud_lon[time-41,0:ncloudsint] = cloudlon[0,0:ncloudsint]
+    cloud_lat[time-41,0:ncloudsint] = cloudlat[0,0:ncloudsint]
+    cloud_bin[time-41,0:ncloudsint] = cloudbin[0,0:ncloudsint] 
+    filledbin = int(max(cloud_bin[time-41,0:ncloudsint]))
     
-    output_distances = distances(filledbin,cloud_lon,cloud_lat,cloud_bin,size,ncloudsint)
+    output_distances = distances(filledbin,cloud_lon[time-41,0:ncloudsint],cloud_lat[time-41,0:ncloudsint],cloud_bin[time-41,0:ncloudsint],size,ncloudsint)
 
-    #D0_all[time-41] = output_distances[0]
-    #D1_all[time-41] = output_distances[1]
     #nclouds_bin_all[time-41] = output_distances[4]
     #nclouds_all[time-41] = nclouds_real
     nclouds_bin_all[0] = output_distances[4]
     nclouds_all[0] = nclouds_real
     
-    nncdf_real = NNCDF(cloud_lon,cloud_lat,size)
+    #nncdf_real = NNCDF(cloud_lon,cloud_lat,size)
 
     ####################
     ####Random field####
@@ -82,11 +87,23 @@ for time in range(begin_time,end_time+1):
     overlap_output = overlap(ncloudsint,nrbins,clon_grid,clat_grid,probability,binwidth)
     #randomfield_output = randomfield(ncloudsint,nrbins,clon_grid,clat_grid,probability)
    
+    cloud_lon_random = overlap_output[0]
+    cloud_lat_random = overlap_output[1]
+    cloud_bin_random = np.array(overlap_output[2])
+    random_overlap_output = np.array(overlap_output[3])
 
-    cloud_lon_random[time-41,0:ncloudsint] = overlap_output[0]
-    cloud_lat_random[time-41,0:ncloudsint] = overlap_output[1]
-    cloud_bin_random[time-41,0:ncloudsint] = np.array(overlap_output[2])
-    random_overlap_output[time-41] = np.array(overlap_output[3])
+    max_idx = np.argmax(random_overlap_output)
+    min_idx = np.argmin(random_overlap_output)
+
+    cloud_lon_min[time-41,0:ncloudsint] = cloud_lon_random[min_idx,:]
+    cloud_lat_min[time-41,0:ncloudsint] = cloud_lat_random[min_idx,:]
+    cloud_bin_min[time-41,0:ncloudsint] = cloud_bin_random[min_idx,:]
+
+    cloud_lon_max[time-41,0:ncloudsint] = cloud_lon_random[max_idx,:]
+    cloud_lat_max[time-41,0:ncloudsint] = cloud_lat_random[max_idx,:]
+    cloud_bin_max[time-41,0:ncloudsint] = cloud_bin_random[max_idx,:]
+
+
     
     #distances_random = distances(filledbin,cloud_lon_random,cloud_lat_random,cloud_bin_random,size,nrclouds)
     
@@ -99,60 +116,12 @@ for time in range(begin_time,end_time+1):
 
 
 
-D0 = np.mean(D0_all,axis=0)
-D1 = np.mean(D1_all,axis=0)
-nclouds_av = int(np.mean(nclouds_all))
-nclouds_bin_av = np.mean(nclouds_bin_all,axis=0)
+#D0 = np.mean(D0_all,axis=0)
+#D1 = np.mean(D1_all,axis=0)
+#nclouds_av = int(np.mean(nclouds_all))
+#nclouds_bin_av = np.mean(nclouds_bin_all,axis=0)
 
 
-#cloud_bin_av = np.zeros(nclouds_av)
-#j=0 
-#for i in range(0,nrbins):
-#    elements = int(nclouds_bin_av[i])
-#    if elements>0:
-#        cloud_bin_av[j:j+elements] = i+1
-#        j = j+elements
-#        filledbin = i
-#
-#cloud_bin_av = np.trim_zeros(cloud_bin_av)
-#nrclouds = len(cloud_bin_av)
-
-#filledbin = np.argmin(mindistance_mean)
-#slope, intercept, r_value, p_value, std_err = stats.linregress(size[0:filledbin],mindistance_mean[0:filledbin])
-#line = intercept + slope*size
-
-#############################################################
-#### Randomness ####
-############################################################
-
-binwidth = size[0]
-
-#randomfield = randomfield_nooverlap(nclouds_av,nrbins,clon_grid,clat_grid,probability,binwidth)
-#randomfield = randomfield(nclouds_av,nrbins,clon_grid,clat_grid,probability)
-
-#cloud_lon_random = randomfield[0]
-#cloud_lat_random = randomfield[1]
-#cloud_bin_random = np.array(randomfield[2])
-
-#distances_random = distances(filledbin,cloud_lon_random,cloud_lat_random,cloud_bin_random,size,nrclouds)
-
-#nncdf_random = NNCDF(cloud_lon_random,cloud_lat_random,size)
-
-
-#plt.figure(figsize=(10,8))
-#plt.scatter(cloud_lon_random,cloud_lat_random,s=cloud_bin_random)
-#plt.savefig('Figures/randomfield.pdf')
-
-
-#plt.figure(figsize=(10,8))
-#plt.xlabel('nncdf random',fontsize=15)
-#plt.ylabel('nncdf real field',fontsize=15)
-#plt.scatter(nncdf_random,nncdf_real)
-#plt.plot(nncdf_random,nncdf_random,c='black')
-#plt.savefig('Figures/nncdf.pdf')
-
-#area = np.trapz(nncdf_real, nncdf_random)
-#print area
 
 
 ###########################################################
@@ -162,27 +131,36 @@ binwidth = size[0]
 random_overlap = NetCDFFile('random_overlap.nc','w')
 
 #nr_iterations = random_overlap.createDimension('nr_iterations',100)
-nr_iterations = random_overlap.createDimension('nr_iterations',end_time-begin_time)
+nr_iterations = random_overlap.createDimension('nr_iterations',end_time-begin_time+1)
 nclouds = random_overlap.createDimension('nclouds',Nmax)
 size_dim = random_overlap.createDimension('size',0)
 
-cloud_bin_overlap = random_overlap.createVariable('cloud_bin_overlap',np.float64,['nr_iterations','nclouds'])
-cloud_bin_overlap[:] = cloud_bin_random[:]
+cloud_bin_overlap_min = random_overlap.createVariable('cloud_bin_overlap_min',np.float64,['nr_iterations','nclouds'])
+cloud_bin_overlap_min[:] = cloud_bin_min[:]
 
-cloud_lon_overlap = random_overlap.createVariable('cloud_lon_overlap',np.float64,['nr_iterations','nclouds'])
-cloud_lon_overlap[:] = cloud_lon_random[:]
+cloud_lon_overlap_min = random_overlap.createVariable('cloud_lon_overlap_min',np.float64,['nr_iterations','nclouds'])
+cloud_lon_overlap_min[:] = cloud_lon_min[:]
 
-cloud_lat_overlap = random_overlap.createVariable('cloud_lat_overlap',np.float64,['nr_iterations','nclouds'])
-cloud_lat_overlap[:] = cloud_lat_random[:]
+cloud_lat_overlap_min = random_overlap.createVariable('cloud_lat_overlap_min',np.float64,['nr_iterations','nclouds'])
+cloud_lat_overlap_min[:] = cloud_lat_min[:]
 
-overlap_var = random_overlap.createVariable('overlap_var',np.float64,['nr_iterations'])
-overlap_var[:] = random_overlap_output[:]
+cloud_bin_overlap_max = random_overlap.createVariable('cloud_bin_overlap_max',np.float64,['nr_iterations','nclouds'])
+cloud_bin_overlap_max[:] = cloud_bin_max[:]
 
-cloud_lon_real = random_overlap.createVariable('cloud_lon_real',np.float64,['nclouds'])
+cloud_lon_overlap_max = random_overlap.createVariable('cloud_lon_overlap_max',np.float64,['nr_iterations','nclouds'])
+cloud_lon_overlap_max[:] = cloud_lon_max[:]
+
+cloud_lat_overlap_max = random_overlap.createVariable('cloud_lat_overlap_max',np.float64,['nr_iterations','nclouds'])
+cloud_lat_overlap_max[:] = cloud_lat_max[:]
+
+cloud_lon_real = random_overlap.createVariable('cloud_lon_real',np.float64,['nr_iterations','nclouds'])
 cloud_lon_real[:] = cloud_lon[:]
 
-cloud_lat_real = random_overlap.createVariable('cloud_lat_real',np.float64,['nclouds'])
+cloud_lat_real = random_overlap.createVariable('cloud_lat_real',np.float64,['nr_iterations','nclouds'])
 cloud_lat_real[:] = cloud_lat[:]
+
+cloud_bin_real = random_overlap.createVariable('cloud_bin_real',np.float64,['nr_iterations','nclouds'])
+cloud_bin_real[:] = cloud_bin[:]
 
 size_var = random_overlap.createVariable('size',np.float64,['size'])
 size_var[:] = size[:]

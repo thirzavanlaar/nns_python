@@ -42,7 +42,7 @@ def randomfield_nooverlap(nclouds,nrbins,clon,clat,probability,binwidth):
     checker = True
     nr = 0
 
-    overlap = np.zeros(2000)
+    overlap = np.zeros(2002)
 
     while checker:
 
@@ -65,15 +65,18 @@ def randomfield_nooverlap(nclouds,nrbins,clon,clat,probability,binwidth):
         for i in pairs:
             index1, index2 = np.array(i)
             distance = haversine(cloudcentres[index1],cloudcentres[index2])
-            mindistance = 0.5*cloud_size[index1]+0.5*cloud_size[index2]
-            if distance>mindistance:
-                checker = False
-            if distance<mindistance:
-                overlap[nr] = overlap[nr] + distance                
-                checker = True
-                break
+            mindistance = cloud_size[index1]+cloud_size[index2]
+            if (mindistance-distance)>0.:
+                overlap[nr] = overlap[nr] + (mindistance-distance)
+                #checker = True
+                #break
 
-        if nr>2000:
+        if overlap[nr]<binwidth/2:
+            checker = False
+
+        print overlap[nr]
+
+        if nr>199:
             raise ValueError('Cannot find random configuration!')	
 
     
@@ -111,13 +114,13 @@ def overlap(nclouds,nrbins,clon,clat,probability,binwidth):
         for i in pairs:
             index1, index2 = np.array(i)
             distance = haversine(cloudcentres[index1],cloudcentres[index2])
-            mindistance = 0.5*cloud_size[index1]+0.5*cloud_size[index2]
-            if distance>mindistance:
-                checker = False
-            if distance<mindistance:
-                overlap[nr] = overlap[nr] + distance                
-                checker = True
-                break
+            mindistance = cloud_size[index1]+cloud_size[index2]
+            #if (mindistance-distance)<0.:
+            #    checker = False
+            if (mindistance-distance)>0.:
+                overlap[nr] = overlap[nr] + (mindistance - distance)       
+                #checker = True
+                #break
 
         nr += 1
         if nr>99:

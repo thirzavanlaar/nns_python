@@ -198,7 +198,7 @@ def COP_perbin(cloud_lon,cloud_lat,cloud_bin,size,filledbin):
 
 
 
-def NNCDF(cloud_lon,cloud_lat,size):
+def NNCDF(cloud_lon,cloud_lat):
     """
     Compute the nncdf of a cloud field, based on Nair et al (1998).
     """
@@ -210,13 +210,50 @@ def NNCDF(cloud_lon,cloud_lat,size):
     Z = np.ma.masked_where(Z==0,Z)
     mindistances = np.min(Z,axis=0)
 
+    distance_max = max(mindistances)
+    distance_min = min(mindistances)    
+
+    print distance_max/100.
+    print distance_max
+
+    step = distance_max/100.
+
+    print mindistances
+
+    bin_edges = np.arange(0, distance_max+step, step)
+    print bin_edges.shape
     #bins_histo = np.arange(0,filledbin)
-    bins_histo = np.arange(0,len(size)+1)
-    values, base = np.histogram(mindistances,bins=bins_histo,density=True)
+    #bins_histo = np.arange(0,len(size)+1)
+    #bins_histo = np.arange(0,100)
+    values, base = np.histogram(mindistances,bins=bin_edges,density=True)
+    print sum(values)
+
     nncdf = np.cumsum(values)
 
-    return nncdf
+    print nncdf
+    return nncdf, base
 
 
+def distance_poisson(filledbin,cloud_bin,cloud_lon,cloud_lat,size):
+    """
+    """
+
+    cloudcentres = np.vstack((cloud_lon,cloud_lat)).T 
+
+    nr_bins = len(size)    
+    ncloud_bin=np.zeros((len(size)))
+    mindistance_JC_mean = np.zeros((len(size)))
+    mindistance_JC_std = np.zeros((len(size)))
+    neighbour_avg = np.zeros((len(size)))
+    neighbour_histo = np.zeros((len(size),len(size)))
+
+    Y = distance.pdist(cloudcentres,haversine)
+    Z = distance.squareform(Y)
+    Z = np.ma.masked_where(Z==0,Z)
+    mindistances = np.min(Z,axis=0)
+
+    print mindistances.shape
+
+    return mindistances,ncloud_bin
 
 
